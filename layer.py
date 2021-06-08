@@ -5,7 +5,7 @@ class DenseLayer:
 
     def __init__(self, n_inputs, n_neurons, L1w=0, L1b=0, L2w=0, L2b=0):
         """
-        This initializes the weights to random (normally distributed) to a matrix of shape (n_inputs, n_neurons). Note
+        This initializes the weights to random (normally distributed) matrix of shape (n_inputs, n_neurons). Note
         that this is the weights transposed (saves us from having to do the later). The biases are initialized to an
         array of zeros of shape (1, n_neurons). The remaining parameter are the lambda regularization strength
         hyper-parameters with L1w being the lambda of the 'weights' for L1 regularization, etc.
