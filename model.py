@@ -1,5 +1,6 @@
 from optimizer import SoftmaxCCE, StochasticGradientDecent
 from layer import DenseLayer
+from visualisations import Plotter
 from activation import ReLU
 from loss import Accuracy
 from copy import deepcopy
@@ -18,6 +19,7 @@ class Model:
         self.optimizer = StochasticGradientDecent(learning_rate=learning_rate, decay=decay, momentum=momentum)
         self.accuracy = Accuracy()
         self.loss_activation = SoftmaxCCE()
+        self.plot = Plotter()
 
     def add_layer(self, n_inputs, n_neurons, L1w=0., L1b=0., L2w=0., L2b=0.):
         self.layers.append(DenseLayer(n_inputs, n_neurons, L1w, L1b, L2w, L2b))
@@ -57,14 +59,17 @@ class Model:
             layer.backward(dvalues)
         return self.backward(layer.prev, layer.dinputs, y)
 
-    def train(self, X, y, epochs=10, batch=None, print_frequency=1):
+    def train(self, X, y, epochs=10, batch=None, print_frequency=1, early_stopping=False, X_val=None, y_val=None):
         if batch is not None:
             steps = X.shape[0] // batch
             if steps * batch < X.shape[0]:
                 steps += 1
         else:
             steps = 1
-
+        if early_stopping:
+            epochs = 200
+        acc = 0
+        break_count = 0
         for epoch in range(epochs + 1):
 
             self.loss_activation.loss.new_pass()
@@ -99,9 +104,19 @@ class Model:
                 regularization_loss = sum(map(self.loss_activation.loss.regularization_loss, self.layers))
                 loss = data_loss + regularization_loss
                 accuracy = self.accuracy.calculate_accumulated()
-
+                self.plot.model_accuracy.append(accuracy)
                 print(f'epoch: {epoch}, acc: {accuracy:.3f}, loss: {loss:.3f}, data_loss: {data_loss:.3f}, '
                       f'reg_loss: {regularization_loss:.3f}, learning_rate: {self.optimizer.current_learning_rate: .5f}')
+
+            if early_stopping:
+                val_acc = self.evaluate(X_val, y_val)
+                self.plot.val_accuracy.append(val_acc)
+                if val_acc - acc < 0.0001:
+                    break_count += 1
+                    if break_count == 6:
+                        self.plot.draw_figure()
+                        break
+                acc = val_acc
 
     def predict(self, X):
         """
